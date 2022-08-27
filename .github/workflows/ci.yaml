@@ -1,0 +1,70 @@
+---
+name: Terraform Plan
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [master]
+
+concurrency:
+  group: terraform_${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    strategy:
+      matrix:
+        clusters:
+          - dev
+    env:
+      environment: prod
+      working-directory: terraform/${{ matrix['clusters'] }}
+ 
+    steps:
+      - uses: actions/checkout@v2
+      
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ap-southeast-2
+          role-duration-seconds: 1200
+
+      - name: Setup tfcmt
+        uses: itkq/actions-tfcmt/setup@v1
+
+      - name: Terraform fmt - ${{ env.working-directory }}
+        id: fmt
+        working-directory: ${{ env.working-directory }}
+        shell: bash
+        run: |
+          if ! terraform fmt -check; then
+            echo "::warning file=${{ env.working-directory }}::*terraform fmt -check* failed"
+          fi
+
+      - name: Terraform Init - ${{ env.working-directory }}
+        id: init
+        run: terraform init
+        working-directory: ${{ env.working-directory }}
+
+      - name: Terraform validate - ${{ env.working-directory }}
+        id: validate
+        run: terraform validate -no-color
+        working-directory: ${{ env.working-directory }}
+
+
+      - name: Terraform plan - ${{ env.working-directory }}
+        id: plan
+        run: tfcmt -var 'target:confluent' plan -- terraform plan
+        working-directory: ${{ env.working-directory }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Hide old plans
+        uses: itkq/actions-tfcmt/hide-old-comments@v1
+        with:
+          org: fsa-streamotion
+          repo: ${{ github.event.repository.name }}
+          pr_number: ${{ github.event.number }}
+          token: ${{ secrets.FSA_GITHUBTOKEN }}
+          target: confluent
