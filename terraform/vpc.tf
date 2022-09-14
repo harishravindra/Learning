@@ -10,10 +10,10 @@ resource "aws_subnet" "main" {
 }
 
 resource "aws_instance" "server" {
-  count = 4 
-  ami           = "ami-a1b2c3d4"
+  count         = 4
+  ami           = "ami-0ebd8ba8cc0a7cee6"
   instance_type = "t2.micro"
-   subnet_id     = aws_subnet.main.id
+  subnet_id     = aws_subnet.main.id
 
   tags = {
     Name = "Server ${count.index}"
@@ -27,20 +27,20 @@ resource "aws_security_group" "allow_http" {
   vpc_id      = aws_vpc.my_vpc.id
 
   ingress {
-    description      = "http from VPC"
-    from_port        =  80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = [aws_vpc.my_vpc.cidr_block]
-    
+    description = "http from VPC"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.my_vpc.cidr_block]
+
   }
 
   egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-   
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+
   }
 }
 
